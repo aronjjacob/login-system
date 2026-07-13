@@ -10,6 +10,13 @@ import secrets
 import time
 import re
 
+from django.urls import reverse
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
+
 
 def login_view(request):
 
@@ -272,12 +279,74 @@ def register_view(request):
 
 
 def forgot_password_view(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+        
+        if email:
+            # 1. Build the absolute URL for the reset page
+            # (or your custom password reset confirm view)
+            reset_path = reverse("password_reset_confirm")
+            reset_url = request.build_absolute_uri(reset_path)
 
-    return render(
-        request,
-        "accounts/forgot_password.html"
-    )
+            # 2. Compose the email subject and message
+            subject = "Password Reset Request"
+            message = f"""Hi,
 
+You requested a password reset for your account.
+
+Click the link below to reset your password:
+{reset_url}
+
+If you did not make this request, please ignore this email.
+"""
+
+            # 3. Send the email
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                messages.success(request, f"Password reset instructions have been sent to {email}.")
+            except Exception as e:
+                messages.error(request, f"Failed to send email. Error: {e}")
+
+            return redirect("forgot_password")
+
+    return render(request, "accounts/forgot_password.html")
+
+
+def password_reset_confirm_view(request):
+    """
+    Renders the page where the user inputs their new password.
+    """
+    if request.method == "POST":
+        email = request.POST.get("email")  # or pass user identifier via token/URL
+        new_password = request.POST.get("new_password")
+        confirm_password = request.POST.get("confirm_password")
+
+        # Basic validation
+        if new_password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return render(request, "accounts/password_reset_confirm.html")
+
+        if len(new_password) < 8:
+            messages.error(request, "Password must be at least 8 characters long.")
+            return render(request, "accounts/password_reset_confirm.html")
+
+        try:
+            user = User.objects.get(email=email)
+            user.set_password(new_password)
+            user.save()
+            messages.success(request, "Your password has been successfully reset! You can now log in.")
+            return redirect("login")
+        except User.DoesNotExist:
+            messages.error(request, "No account found with that email address.")
+            return render(request, "accounts/password_reset_confirm.html")
+
+    return render(request, "accounts/password_reset_confirm.html")
 
 
 def dashboard_view(request):
