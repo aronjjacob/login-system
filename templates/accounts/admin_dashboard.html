@@ -1,380 +1,167 @@
 {% extends "accounts/base.html" %} 
 
-{% block title %} 
+{% block title %}
     Admin Dashboard
-{% endblock %} 
-
+{% endblock%} 
 
 {% block content %}
 
-
 <div class="min-h-screen bg-gray-50 flex">
-{% include "accounts/sidebar.html" %}
+  {% include "accounts/sidebar.html" %}
   <!-- MAIN CONTENT -->
 
-
   <main class="flex-1 p-8">
-
-
     <header class="mb-8">
-
-      <h2 class="text-2xl font-semibold text-gray-900">
-        Admin Dashboard
-      </h2>
-
+      <h2 class="text-2xl font-semibold text-gray-900">Admin Dashboard</h2>
 
       <p class="text-sm text-gray-500 mt-1">
         Monitor authentication activity and system security.
       </p>
-
-
     </header>
-
-
-
-
 
     <!-- STAT CARDS -->
 
-
     <div class="grid grid-cols-1 md:grid-cols-5 gap-5 mb-8">
-
-
       <div class="bg-white border rounded-xl p-5">
+        <p class="text-sm text-gray-500">Total Users</p>
 
-        <p class="text-sm text-gray-500">
-          Total Users
-        </p>
-
-        <h3 class="text-3xl font-semibold mt-2">
-          {{ total_users }}
-        </h3>
-
+        <h3 class="text-3xl font-semibold mt-2">{{ total_users }}</h3>
       </div>
 
-
-
-
       <div class="bg-white border rounded-xl p-5">
+        <p class="text-sm text-gray-500">Active Users</p>
 
-        <p class="text-sm text-gray-500">
-          Active Users
-        </p>
-
-        <h3 class="text-3xl font-semibold mt-2">
-          {{ active_users }}
-        </h3>
-
+        <h3 class="text-3xl font-semibold mt-2">{{ active_users }}</h3>
       </div>
 
-
-
-
-
       <div class="bg-white border rounded-xl p-5">
-
-        <p class="text-sm text-gray-500">
-          Successful Logins
-        </p>
+        <p class="text-sm text-gray-500">Successful Logins</p>
 
         <h3 class="text-3xl font-semibold text-green-600 mt-2">
           {{ successful_logins }}
         </h3>
-
       </div>
 
-
-
-
-
       <div class="bg-white border rounded-xl p-5">
-
-        <p class="text-sm text-gray-500">
-          Failed Attempts
-        </p>
+        <p class="text-sm text-gray-500">Failed Attempts</p>
 
         <h3 class="text-3xl font-semibold text-orange-600 mt-2">
           {{ failed_attempts }}
         </h3>
-
       </div>
 
-
-
-
-
       <div class="bg-white border rounded-xl p-5">
-
-        <p class="text-sm text-gray-500">
-          Locked Accounts
-        </p>
+        <p class="text-sm text-gray-500">Locked Accounts</p>
 
         <h3 class="text-3xl font-semibold text-red-600 mt-2">
           {{ locked_accounts }}
         </h3>
-
       </div>
-
-
-
     </div>
-
-
-
-
 
     <!-- LOGIN ACTIVITY TABLE -->
 
-
     <div class="bg-white border border-gray-200 rounded-xl">
-
-
       <div class="p-5 border-b">
-
-        <h3 class="font-semibold text-gray-900">
-          Recent Login Activity
-        </h3>
-
+        <h3 class="font-semibold text-gray-900">Recent Login Activity</h3>
       </div>
-
-
-
-
 
       <div class="overflow-x-auto">
-
-
         <table class="w-full text-sm">
-
-
           <thead class="bg-gray-50">
-
-
             <tr>
+              <th class="text-left px-5 py-3 text-gray-600">Username</th>
 
+              <th class="text-left px-5 py-3 text-gray-600">Login Time</th>
 
-              <th class="text-left px-5 py-3 text-gray-600">
-                Username
-              </th>
+              <th class="text-left px-5 py-3 text-gray-600">Status</th>
 
-
-
-              <th class="text-left px-5 py-3 text-gray-600">
-                Login Time
-              </th>
-
-
-
-              <th class="text-left px-5 py-3 text-gray-600">
-                Status
-              </th>
-
-
-
-              <th class="text-left px-5 py-3 text-gray-600">
-                Reason
-              </th>
-
-
+              <th class="text-left px-5 py-3 text-gray-600">Reason</th>
             </tr>
-
-
           </thead>
 
-
-
-
-
-
           <tbody>
+            {% for log in recent_activity %}
 
+            <tr class="border-t">
+              <td class="px-5 py-3">{{ log.username }}</td>
 
+              <td class="px-5 py-3 text-gray-600">
+                {{ log.login_time|date:"M d, Y H:i" }}
+              </td>
 
-          {% for log in recent_activity %}
+              <td class="px-5 py-3">
+                {% if log.authentication_status == "SUCCESS" %}
 
+                <span
+                  class="px-3 py-1 text-xs rounded-full bg-green-50 text-green-700"
+                >
+                  SUCCESS
+                </span>
 
+                {% else %}
 
-          <tr class="border-t">
+                <span
+                  class="px-3 py-1 text-xs rounded-full bg-red-50 text-red-700"
+                >
+                  FAILED
+                </span>
 
+                {% endif %}
+              </td>
 
-            <td class="px-5 py-3">
-              {{ log.username }}
-            </td>
+              <td class="px-5 py-3 text-gray-600">{{ log.reason }}</td>
+            </tr>
 
+            {% empty %}
 
+            <tr>
+              <td colspan="4" class="text-center py-5 text-gray-500">
+                No login activity recorded.
+              </td>
+            </tr>
 
-
-            <td class="px-5 py-3 text-gray-600">
-
-              {{ log.login_time|date:"M d, Y H:i" }}
-
-            </td>
-
-
-
-
-
-            <td class="px-5 py-3">
-
-
-              {% if log.authentication_status == "SUCCESS" %}
-
-
-              <span
-              class="px-3 py-1 text-xs rounded-full bg-green-50 text-green-700">
-                SUCCESS
-              </span>
-
-
-
-              {% else %}
-
-
-
-              <span
-              class="px-3 py-1 text-xs rounded-full bg-red-50 text-red-700">
-                FAILED
-              </span>
-
-
-
-              {% endif %}
-
-
-            </td>
-
-
-
-
-
-            <td class="px-5 py-3 text-gray-600">
-
-              {{ log.reason }}
-
-            </td>
-
-
-
-          </tr>
-
-
-
-
-
-          {% empty %}
-
-
-
-          <tr>
-
-
-            <td colspan="4"
-            class="text-center py-5 text-gray-500">
-
-
-              No login activity recorded.
-
-
-            </td>
-
-
-          </tr>
-
-
-
-          {% endfor %}
-
-
-
+            {% endfor %}
           </tbody>
-
-
         </table>
-
-
-
       </div>
-
-
-
-
 
       <!-- PAGINATION -->
 
-
       <div class="flex justify-between items-center p-5 border-t">
-
-
         {% if recent_activity.has_previous %}
 
-
         <a
-        href="?page={{ recent_activity.previous_page_number }}"
-        class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
-
+          href="?page={{ recent_activity.previous_page_number }}"
+          class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+        >
           Previous
-
         </a>
-
-
 
         {% else %}
 
-
         <span></span>
-
 
         {% endif %}
 
-
-
-
-
         <p class="text-sm text-gray-500">
-
-          Page {{ recent_activity.number }}
-          of {{ recent_activity.paginator.num_pages }}
-
+          Page {{ recent_activity.number }} of {{
+          recent_activity.paginator.num_pages }}
         </p>
-
-
-
-
-
 
         {% if recent_activity.has_next %}
 
-
-
         <a
-        href="?page={{ recent_activity.next_page_number }}"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-
+          href="?page={{ recent_activity.next_page_number }}"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
           Next
-
         </a>
 
-
-
         {% endif %}
-
-
-
       </div>
-
-
-
-
     </div>
-
-
-
   </main>
-
-
-
 </div>
-
-
 
 {% endblock %}

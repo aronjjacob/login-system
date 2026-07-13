@@ -169,3 +169,39 @@ class LoginActivity(models.Model):
 
     def __str__(self):
         return self.username
+    
+
+class LoginLog(models.Model):
+
+    STATUS_CHOICES = (
+        ("SUCCESS", "SUCCESS"),
+        ("FAILED", "FAILED"),
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+
+    username = models.CharField(
+        max_length=150
+    )
+
+    login_time = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    authentication_status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES
+    )
+
+    reason = models.CharField(
+        max_length=255
+    )
+
+
+    def __str__(self):
+        return f"{self.username} - {self.authentication_status}"

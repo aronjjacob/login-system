@@ -1,34 +1,49 @@
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.urls import reverse
 from django.core.mail import send_mail
-from django.contrib.auth import authenticate, login
+
 from django.contrib import messages
-from django.core.mail import send_mail
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.contrib.auth.models import User
-from django.http import HttpResponse
-from django.contrib.auth import logout
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth import (
+    authenticate,
+    login,
+    logout,
+    get_user_model
+)
+
+from django.contrib.auth.decorators import (
+    login_required,
+    user_passes_test
+)
+
+from django.shortcuts import (
+    render,
+    redirect,
+    get_object_or_404
+)
 
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required, user_passes_test
 
-from .models import UserProfile, LoginActivity
 from django.core.paginator import Paginator
-from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password
-from django.contrib import messages
-from django.shortcuts import get_object_or_404
+
+
+from .models import (
+    UserProfile,
+    LoginActivity
+)
+
+
 import secrets
 import time
 import re
 
+
+# Use custom user model safely
+User = get_user_model()
+
 # ==========================================
 # LOGIN
 # ==========================================
-from django.urls import reverse
-from django.conf import settings
-from django.contrib.auth import get_user_model
 
 
 User = get_user_model()
@@ -38,17 +53,13 @@ def login_view(request):
 
     if request.method == "POST":
 
-
         username = request.POST.get(
             "username"
         )
 
-
         password = request.POST.get(
             "password"
         )
-
-
 
         try:
 
@@ -56,9 +67,7 @@ def login_view(request):
                 username=username
             )
 
-
         except User.DoesNotExist:
-
 
             LoginActivity.objects.create(
 
@@ -70,32 +79,24 @@ def login_view(request):
 
             )
 
-
             messages.error(
                 request,
                 "Invalid username or password."
             )
 
-
             return redirect(
                 "login"
             )
-
-
 
         profile, created = UserProfile.objects.get_or_create(
             user=user
         )
 
-
-
         # ==============================
         # CHECK ACCOUNT LOCK
         # ==============================
 
-
         if profile.account_locked():
-
 
             LoginActivity.objects.create(
 
@@ -109,19 +110,14 @@ def login_view(request):
 
             )
 
-
             messages.error(
                 request,
                 "Account is locked. Contact administrator."
             )
 
-
             return redirect(
                 "login"
             )
-
-
-
 
         authenticated_user = authenticate(
 
@@ -133,21 +129,15 @@ def login_view(request):
 
         )
 
-
-
         # ==============================
         # WRONG PASSWORD
         # ==============================
 
-
         if authenticated_user is None:
-
 
             profile.failed_login_attempts += 1
 
             profile.save()
-
-
 
             LoginActivity.objects.create(
 
@@ -161,10 +151,7 @@ def login_view(request):
 
             )
 
-
-
             if profile.failed_login_attempts >= 5:
-
 
                 profile.is_locked = True
 
@@ -176,21 +163,16 @@ def login_view(request):
 
                 profile.save()
 
-
-
                 messages.error(
                     request,
                     "Account locked because of multiple failed attempts."
                 )
 
-
             else:
-
 
                 remaining = (
                     5 - profile.failed_login_attempts
                 )
-
 
                 messages.error(
 
@@ -200,37 +182,26 @@ def login_view(request):
 
                 )
 
-
-
             return redirect(
                 "login"
             )
 
-
-
         if not user.email:
-
 
             messages.error(
                 request,
                 "No email registered."
             )
 
-
             return redirect(
                 "login"
             )
 
-
-
-
         # CREATE OTP
-
 
         otp = str(
             secrets.randbelow(900000) + 100000
         )
-
 
         request.session["otp"] = otp
 
@@ -238,11 +209,7 @@ def login_view(request):
 
         request.session["user_id"] = user.id
 
-
-
-
         try:
-
 
             send_mail(
 
@@ -274,10 +241,7 @@ Secure Authentication System
 
             )
 
-
-
         except Exception as e:
-
 
             messages.error(
 
@@ -287,18 +251,13 @@ Secure Authentication System
 
             )
 
-
             return redirect(
                 "login"
             )
 
-
-
         return redirect(
             "verify_otp"
         )
-
-
 
     return render(
         request,
@@ -318,7 +277,6 @@ def verify_otp(request):
 
     remaining_time = 0
 
-
     if otp_created:
 
         remaining_time = max(
@@ -326,58 +284,43 @@ def verify_otp(request):
             300 - int(time.time() - otp_created)
         )
 
-
-
     if request.method == "POST":
 
         entered_otp = request.POST.get(
             "otp"
         )
 
-
         saved_otp = request.session.get(
             "otp"
         )
-
 
         otp_created = request.session.get(
             "otp_created"
         )
 
-
-
         if not saved_otp or not otp_created:
-
 
             messages.error(
                 request,
                 "OTP session expired. Please login again."
             )
 
-
             return redirect(
                 "login"
             )
 
-
-
         if time.time() - otp_created > 300:
-
 
             messages.error(
                 request,
                 "OTP expired. Please login again."
             )
 
-
             request.session.flush()
-
 
             return redirect(
                 "login"
             )
-
-
 
         # ==============================
         # OTP SUCCESS
@@ -385,18 +328,14 @@ def verify_otp(request):
 
         if entered_otp == saved_otp:
 
-
             user = User.objects.get(
                 id=request.session["user_id"]
             )
-
 
             login(
                 request,
                 user
             )
-
-
 
             # CREATE SUCCESS LOGIN LOG
 
@@ -412,8 +351,6 @@ def verify_otp(request):
 
             )
 
-
-
             # CLEAR OTP SESSION
 
             request.session.pop(
@@ -421,41 +358,31 @@ def verify_otp(request):
                 None
             )
 
-
             request.session.pop(
                 "otp_created",
                 None
             )
-
 
             request.session.pop(
                 "user_id",
                 None
             )
 
-
-
             # ROLE REDIRECT
 
             if user.is_staff:
-
 
                 return redirect(
                     "admin_dashboard"
                 )
 
-
             else:
-
 
                 return redirect(
                     "dashboard"
                 )
 
-
-
         else:
-
 
             # WRONG OTP
 
@@ -475,13 +402,10 @@ def verify_otp(request):
 
             )
 
-
             messages.error(
                 request,
                 "Invalid OTP."
             )
-
-
 
     return render(
 
@@ -501,82 +425,12 @@ def verify_otp(request):
 # RESEND OTP
 # ==========================================
 
+
 def resend_otp(request):
 
-    user_id = request.session.get(
-        "user_id"
-    )
+    user_id = request.session.get("user_id")
 
     if not user_id:
-def forgot_password_view(request):
-    if request.method == "POST":
-        email = request.POST.get("email")
-        
-        if email:
-            # 1. Build the absolute URL for the reset page
-            # (or your custom password reset confirm view)
-            reset_path = reverse("password_reset_confirm")
-            reset_url = request.build_absolute_uri(reset_path)
-
-            # 2. Compose the email subject and message
-            subject = "Password Reset Request"
-            message = f"""Hi,
-
-You requested a password reset for your account.
-
-Click the link below to reset your password:
-{reset_url}
-
-If you did not make this request, please ignore this email.
-"""
-
-            # 3. Send the email
-            try:
-                send_mail(
-                    subject=subject,
-                    message=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-                messages.success(request, f"Password reset instructions have been sent to {email}.")
-            except Exception as e:
-                messages.error(request, f"Failed to send email. Error: {e}")
-
-            return redirect("forgot_password")
-
-    return render(request, "accounts/forgot_password.html")
-
-
-def password_reset_confirm_view(request):
-    """
-    Renders the page where the user inputs their new password.
-    """
-    if request.method == "POST":
-        email = request.POST.get("email")  # or pass user identifier via token/URL
-        new_password = request.POST.get("new_password")
-        confirm_password = request.POST.get("confirm_password")
-
-        # Basic validation
-        if new_password != confirm_password:
-            messages.error(request, "Passwords do not match.")
-            return render(request, "accounts/password_reset_confirm.html")
-
-        if len(new_password) < 8:
-            messages.error(request, "Password must be at least 8 characters long.")
-            return render(request, "accounts/password_reset_confirm.html")
-
-        try:
-            user = User.objects.get(email=email)
-            user.set_password(new_password)
-            user.save()
-            messages.success(request, "Your password has been successfully reset! You can now log in.")
-            return redirect("login")
-        except User.DoesNotExist:
-            messages.error(request, "No account found with that email address.")
-            return render(request, "accounts/password_reset_confirm.html")
-
-    return render(request, "accounts/password_reset_confirm.html")
 
         messages.error(
             request,
@@ -585,16 +439,13 @@ def password_reset_confirm_view(request):
 
         return redirect("login")
 
-    user = User.objects.get(
-        id=user_id
-    )
+    user = User.objects.get(id=user_id)
 
     otp = str(
         secrets.randbelow(900000) + 100000
     )
 
     request.session["otp"] = otp
-
     request.session["otp_created"] = time.time()
 
     try:
@@ -602,7 +453,6 @@ def password_reset_confirm_view(request):
         send_mail(
 
             subject="Secure Login Verification",
-
 
             message=f"""
 Hello {user.username},
@@ -614,14 +464,11 @@ Your new One-Time Password (OTP) is:
 Secure Authentication System
 """,
 
-
             from_email=None,
-
 
             recipient_list=[
                 user.email
             ],
-
 
             fail_silently=False
 
@@ -632,16 +479,14 @@ Secure Authentication System
             "New OTP sent."
         )
 
-    except:
+    except Exception:
 
         messages.error(
             request,
             "Unable to resend OTP."
         )
 
-    return redirect(
-        "verify_otp"
-    )
+    return redirect("verify_otp")
 
 
 # ==========================================
@@ -762,17 +607,14 @@ def register_view(request):
 
         )
 
-
         UserProfile.objects.create(
             user=user
         )
-
 
         messages.success(
             request,
             "Account created successfully."
         )
-
 
         return redirect("login")
 
@@ -803,13 +645,11 @@ def dashboard_view(request):
 
     user = request.user
 
-
     recent_activity = LoginActivity.objects.filter(
         user=user
     ).order_by(
         "-login_time"
     )[:5]
-
 
     context = {
 
@@ -821,13 +661,12 @@ def dashboard_view(request):
 
     }
 
-
     return render(
         request,
         "accounts/dashboard.html",
         context
     )
-    
+
 # ==========================================
 # ADMIN SECURITY CHECK
 # ==========================================
@@ -841,7 +680,6 @@ def admin_required(user):
     )
 
 
-
 # ==========================================
 # ADMIN DASHBOARD
 # ==========================================
@@ -851,45 +689,31 @@ def admin_required(user):
 @user_passes_test(admin_required)
 def admin_dashboard(request):
 
-
     total_users = User.objects.count()
-
-
 
     active_users = User.objects.filter(
         is_active=True
     ).count()
 
-
-
     locked_accounts = UserProfile.objects.filter(
         is_locked=True
     ).count()
-
-
 
     failed_attempts = LoginActivity.objects.filter(
         authentication_status="FAILED"
     ).count()
 
-
-
     successful_logins = LoginActivity.objects.filter(
         authentication_status="SUCCESS"
     ).count()
-
-
 
     # ==============================
     # PAGINATION
     # ==============================
 
-
     logs = LoginActivity.objects.order_by(
         "-login_time"
     )
-
-
 
     paginator = Paginator(
 
@@ -899,19 +723,13 @@ def admin_dashboard(request):
 
     )
 
-
-
     page_number = request.GET.get(
         "page"
     )
 
-
-
     recent_activity = paginator.get_page(
         page_number
     )
-
-
 
     context = {
 
@@ -942,8 +760,6 @@ def admin_dashboard(request):
 
     }
 
-
-
     return render(
 
         request,
@@ -953,10 +769,49 @@ def admin_dashboard(request):
         context
 
     )
-    
+
+# ==========================================
+# LOGIN ACTIVITY LOGS
+# ==========================================
+
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def login_activity_logs(request):
+
+    logs = LoginActivity.objects.all().order_by(
+        "-login_time"
+    )
+
+    paginator = Paginator(
+        logs,
+        15
+    )
+
+    page = request.GET.get(
+        "page"
+    )
+
+    activity_logs = paginator.get_page(
+        page
+    )
+
+    context = {
+
+        "activity_logs": activity_logs
+
+    }
+
+    return render(
+        request,
+        "accounts/login_activity.html",
+        context
+    )
+
 # ==========================================
 # LOGOUT
 # ==========================================
+
 
 def logout_view(request):
 
@@ -970,8 +825,6 @@ def logout_view(request):
     return redirect("login")
 
 
-
-    
 # ==========================================
 # USER MANAGEMENT
 # ==========================================
@@ -1001,56 +854,110 @@ def user_management(request):
 # CREATE USER
 # ==========================================
 
+# ==========================================
+# CREATE USER
+# ==========================================
+
+# ==========================================
+# CREATE USER
+# ==========================================
+
 @login_required(login_url="login")
 @user_passes_test(admin_required)
 def create_user(request):
 
     if request.method == "POST":
 
-        username = request.POST.get(
-            "username"
-        )
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
 
-        email = request.POST.get(
-            "email"
-        )
+        username = request.POST.get("username")
+        email = request.POST.get("email")
 
-        password = request.POST.get(
-            "password"
-        )
+        password = request.POST.get("password")
+        confirm_password = request.POST.get("confirm_password")
 
+        # PASSWORD MATCH
 
-        # CHECK EXISTING USERNAME
+        if password != confirm_password:
 
-        if User.objects.filter(
-            username=username
-        ).exists():
+            messages.error(
+                request,
+                "Passwords do not match."
+            )
+
+            return redirect("create_user")
+
+        # PASSWORD VALIDATION
+
+        if len(password) < 12:
+
+            messages.error(
+                request,
+                "Password must contain at least 12 characters."
+            )
+
+            return redirect("create_user")
+
+        if not re.search("[A-Z]", password):
+
+            messages.error(
+                request,
+                "Password must contain uppercase letter."
+            )
+
+            return redirect("create_user")
+
+        if not re.search("[a-z]", password):
+
+            messages.error(
+                request,
+                "Password must contain lowercase letter."
+            )
+
+            return redirect("create_user")
+
+        if not re.search("[0-9]", password):
+
+            messages.error(
+                request,
+                "Password must contain a number."
+            )
+
+            return redirect("create_user")
+
+        if not re.search("[!@#$%^&*]", password):
+
+            messages.error(
+                request,
+                "Password must contain special character."
+            )
+
+            return redirect("create_user")
+
+        # CHECK USERNAME
+
+        if User.objects.filter(username=username).exists():
 
             messages.error(
                 request,
                 "Username already exists."
             )
 
-            return redirect(
-                "create_user"
-            )
+            return redirect("create_user")
 
+        # CHECK EMAIL
 
-        # CHECK EXISTING EMAIL
-
-        if User.objects.filter(
-            email=email
-        ).exists():
+        if User.objects.filter(email=email).exists():
 
             messages.error(
                 request,
                 "Email already registered."
             )
 
-            return redirect(
-                "create_user"
-            )
+            return redirect("create_user")
 
+        # CREATE USER
 
         user = User.objects.create_user(
 
@@ -1058,32 +965,36 @@ def create_user(request):
 
             email=email,
 
-            password=password
+            password=password,
+
+            first_name=first_name,
+
+            last_name=last_name
 
         )
 
+        # CREATE PROFILE
 
         UserProfile.objects.create(
             user=user
         )
-
 
         messages.success(
             request,
             "User created successfully."
         )
 
-
         return redirect(
             "user_management"
         )
 
+    # IMPORTANT
+    # Handles GET request
 
     return render(
         request,
         "accounts/create_user.html"
     )
-
 
 
 # ==========================================
@@ -1099,7 +1010,6 @@ def edit_user(request, user_id):
         id=user_id
     )
 
-
     if request.method == "POST":
 
         username = request.POST.get(
@@ -1110,25 +1020,20 @@ def edit_user(request, user_id):
             "email"
         )
 
-
         user.username = username
 
         user.email = email
 
-
         user.save()
-
 
         messages.success(
             request,
             "User updated successfully."
         )
 
-
         return redirect(
             "user_management"
         )
-
 
     context = {
 
@@ -1136,13 +1041,11 @@ def edit_user(request, user_id):
 
     }
 
-
     return render(
         request,
         "accounts/edit_user.html",
         context
     )
-
 
 
 # ==========================================
@@ -1158,7 +1061,6 @@ def delete_user(request, user_id):
         id=user_id
     )
 
-
     # PREVENT DELETE ADMIN
 
     if user.is_superuser:
@@ -1168,22 +1070,19 @@ def delete_user(request, user_id):
             "Cannot delete administrator account."
         )
 
-
     else:
 
         user.delete()
-
 
         messages.success(
             request,
             "User deleted successfully."
         )
 
-
     return redirect(
         "user_management"
     )
-    
+
 
 # ==========================================
 # LOCKED ACCOUNTS
@@ -1205,7 +1104,6 @@ def locked_accounts(request):
             "locked_users": locked_users
         }
     )
-
 
 
 # ==========================================
