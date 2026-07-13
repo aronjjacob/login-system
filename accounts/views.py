@@ -94,7 +94,7 @@ def login_view(request):
         # ==============================
 
 
-        if profile.is_locked:
+        if profile.account_locked():
 
 
             LoginActivity.objects.create(
