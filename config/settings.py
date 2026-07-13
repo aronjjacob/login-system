@@ -8,6 +8,10 @@ import os
 
 load_dotenv()
 
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1"
+).split(",")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,14 +22,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-thf2mg%e2%kq*-y^##l3p-%h3eiinb%ldgmxv3#wjc8#tlxh0k'
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
+    "login-system-7ldt.onrender.com",
+    ".onrender.com",
     "localhost",
     "127.0.0.1",
 ]
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://login-system-7ldt.onrender.com",
+]
 
 # ==========================================
 # APPLICATIONS
@@ -258,3 +266,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')      # Your sender email
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Your App Password
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "fallback-secret-key"
+)
