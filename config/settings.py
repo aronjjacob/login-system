@@ -1,12 +1,17 @@
-"""
-Django settings for config project.
-"""
-
 from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+
 load_dotenv()
+
+
+# ==========================================
+# BASE DIRECTORY
+# ==========================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # ==========================================
 # SECURITY
@@ -17,7 +22,7 @@ SECRET_KEY = os.getenv(
     "django-insecure-thf2mg%e2%kq*-y^##l3p-%h3eiinb%ldgmxv3#wjc8#tlxh0k"
 )
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "login-system-7ldt.onrender.com",
