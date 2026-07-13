@@ -12,7 +12,7 @@ Verify OTP
 
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
 
-            <!-- HEADER -->
+            <!-- Header -->
 
             <header class="text-center mb-8">
 
@@ -50,7 +50,7 @@ Verify OTP
 
             {% endif %}
 
-            <!-- OTP FORM -->
+            <!-- OTP Form -->
 
             <form method="POST" class="space-y-6">
 
@@ -79,7 +79,12 @@ Verify OTP
                     >
 
                     <p class="text-xs text-gray-500 mt-2">
-                        The verification code is valid for one login session.
+                        OTP expires in
+                        <span
+                            id="countdown"
+                            class="font-semibold text-red-600">
+                            05:00
+                        </span>
                     </p>
 
                 </div>
@@ -99,16 +104,16 @@ Verify OTP
             <footer class="border-t border-gray-100 mt-6 pt-5 text-center text-sm">
 
                 <p class="text-gray-500">
-                    Didn't receive the code?
+                     Didn't receive the code?
                 </p>
 
-                <button
-                    type="button"
-                    class="mt-2 text-blue-600 font-semibold hover:underline">
+                <a
+                    href="{% url 'resend_otp' %}"
+                    class="mt-2 inline-block text-blue-600 font-semibold hover:underline">
 
                     Resend OTP
 
-                </button>
+                </a>
 
             </footer>
 
@@ -117,5 +122,50 @@ Verify OTP
     </section>
 
 </main>
+
+<script>
+
+    let timeLeft = {{ remaining_time }};
+
+    const countdown = document.getElementById("countdown");
+
+    function updateTimer() {
+
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+
+        countdown.textContent =
+            `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+        if (timeLeft <= 0) {
+
+            countdown.textContent = "Expired";
+
+            document.querySelector("button[type='submit']").disabled = true;
+
+            document.querySelector("button[type='submit']").classList.add(
+                "opacity-50",
+                "cursor-not-allowed"
+            );
+
+            setTimeout(() => {
+
+                window.location.href = "{% url 'login' %}";
+
+            }, 2000);
+
+            return;
+
+        }
+
+        timeLeft--;
+
+    }
+
+    updateTimer();
+
+    setInterval(updateTimer, 1000);
+
+</script>
 
 {% endblock %}
