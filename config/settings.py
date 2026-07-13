@@ -8,19 +8,14 @@ import os
 
 load_dotenv()
 
-ALLOWED_HOSTS = os.environ.get(
-    "ALLOWED_HOSTS",
-    "localhost,127.0.0.1"
-).split(",")
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-
 # ==========================================
 # SECURITY
 # ==========================================
 
-SECRET_KEY = 'django-insecure-thf2mg%e2%kq*-y^##l3p-%h3eiinb%ldgmxv3#wjc8#tlxh0k'
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "django-insecure-thf2mg%e2%kq*-y^##l3p-%h3eiinb%ldgmxv3#wjc8#tlxh0k"
+)
 
 DEBUG = True
 
@@ -31,10 +26,16 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 
+
 CSRF_TRUSTED_ORIGINS = [
     "https://login-system-7ldt.onrender.com",
 ]
 
+
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https",
+)
 # ==========================================
 # APPLICATIONS
 # ==========================================
@@ -259,7 +260,6 @@ CSRF_COOKIE_HTTPONLY = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Gmail SMTP Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
