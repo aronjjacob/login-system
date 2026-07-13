@@ -1,0 +1,58 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>{% block title %} Secure Authentication System {% endblock %}</title>
+
+    <!-- Fonts -->
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Symbols -->
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+
+    <!-- Tailwind -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              inter: ["Inter"],
+            },
+
+            colors: {
+              primary: "#005ea5",
+
+              primaryHover: "#0077ce",
+
+              background: "#f9f9f8",
+            },
+          },
+        },
+      };
+    </script>
+
+    {% block extra_css %} {% endblock %}
+  </head>
+
+  <body
+    class="bg-background min-h-screen font-inter text-gray-900"
+  >
+    {% block content %} {% endblock %} {% block extra_js %} {% endblock %}
+  </body>
+</html>
