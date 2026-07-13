@@ -1,0 +1,610 @@
+{% extends "accounts/base.html" %}
+
+
+{% block title %}
+Create Account
+{% endblock %}
+
+
+
+{% block content %}
+
+<main class="min-h-screen flex items-center justify-center px-4 py-12">
+
+
+    <section class="w-full max-w-md">
+
+
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+
+
+            <!-- HEADER -->
+
+            <header class="text-center mb-8">
+
+
+                <div
+                    class="w-14 h-14 bg-primary rounded-full flex items-center justify-center mx-auto mb-5">
+
+
+                    <span class="material-symbols-outlined text-white text-3xl">
+                        security
+                    </span>
+
+
+                </div>
+
+
+
+                <h1 class="text-2xl font-semibold text-gray-900">
+                    Create Account
+                </h1>
+
+
+                <p class="text-sm text-gray-500 mt-2">
+                    Register secure authentication credentials
+                </p>
+
+
+            </header>
+
+
+
+
+
+
+            <!-- FORM -->
+
+
+            <form
+                method="POST"
+                action="{% url 'register' %}"
+                id="registerForm"
+                class="space-y-5">
+
+
+                {% csrf_token %}
+
+
+
+
+
+                <!-- USERNAME -->
+
+                <div>
+
+                    <label
+                        for="username"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+
+                        Username
+
+                    </label>
+
+
+                    <input
+                        id="username"
+                        name="username"
+                        type="text"
+                        autocomplete="username"
+                        required
+                        placeholder="Enter username"
+
+                        class="w-full h-11 px-4 border border-gray-300 rounded-lg
+                        focus:ring-2 focus:ring-blue-500
+                        focus:border-blue-500
+                        outline-none transition"
+                    >
+
+                </div>
+
+
+
+
+
+
+                <!-- EMAIL -->
+
+
+                <div>
+
+
+                    <label
+                        for="email"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+
+                        Email
+
+                    </label>
+
+
+
+                    <input
+
+                        id="email"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        required
+                        placeholder="example@email.com"
+
+                        class="w-full h-11 px-4 border border-gray-300 rounded-lg
+                        focus:ring-2 focus:ring-blue-500
+                        focus:border-blue-500
+                        outline-none transition"
+
+                    >
+
+
+                </div>
+
+
+
+
+
+
+
+
+
+                <!-- PASSWORD -->
+
+
+                <div>
+
+
+                    <label
+                        for="password"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+
+                        Password
+
+                    </label>
+
+
+
+                    <div class="relative">
+
+
+                        <input
+
+                            id="password"
+                            name="password"
+                            type="password"
+                            autocomplete="new-password"
+                            required
+                            placeholder="Create password"
+
+                            class="w-full h-11 px-4 pr-12 border border-gray-300 rounded-lg
+                            focus:ring-2 focus:ring-blue-500
+                            focus:border-blue-500
+                            outline-none transition"
+
+                        >
+
+
+
+                        <button
+
+                            type="button"
+
+                            data-target="password"
+
+                            class="password-toggle absolute right-3 top-1/2 -translate-y-1/2
+                            text-gray-400 hover:text-gray-600"
+
+                        >
+
+                            <span class="material-symbols-outlined">
+                                visibility
+                            </span>
+
+
+                        </button>
+
+
+                    </div>
+
+
+                </div>
+
+
+
+
+
+
+
+
+
+                <!-- PASSWORD REQUIREMENTS -->
+
+
+                <div class="pt-1">
+
+
+                    <p class="text-xs font-medium text-gray-500 mb-2">
+
+                        Password requirements
+
+                    </p>
+
+
+
+
+                    <div class="grid grid-cols-2 gap-y-2 text-xs">
+
+
+
+                        <div data-rule="length" class="requirement flex items-center gap-2">
+
+                            <span class="indicator w-3.5 h-3.5 rounded-full border border-gray-300"></span>
+
+                            12+ characters
+
+                        </div>
+
+
+
+
+                        <div data-rule="uppercase" class="requirement flex items-center gap-2">
+
+                            <span class="indicator w-3.5 h-3.5 rounded-full border border-gray-300"></span>
+
+                            Uppercase
+
+                        </div>
+
+
+
+
+                        <div data-rule="lowercase" class="requirement flex items-center gap-2">
+
+                            <span class="indicator w-3.5 h-3.5 rounded-full border border-gray-300"></span>
+
+                            Lowercase
+
+                        </div>
+
+
+
+
+                        <div data-rule="number" class="requirement flex items-center gap-2">
+
+                            <span class="indicator w-3.5 h-3.5 rounded-full border border-gray-300"></span>
+
+                            Number
+
+                        </div>
+
+
+
+
+                        <div data-rule="special" class="requirement flex items-center gap-2">
+
+                            <span class="indicator w-3.5 h-3.5 rounded-full border border-gray-300"></span>
+
+                            Special symbol
+
+                        </div>
+
+
+                    </div>
+
+
+
+                </div>
+
+
+
+
+
+
+
+
+
+                <!-- CONFIRM PASSWORD -->
+
+
+                <div>
+
+
+                    <label
+                        for="confirm_password"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+
+
+                        Confirm Password
+
+
+                    </label>
+
+
+
+
+                    <div class="relative">
+
+
+                        <input
+
+                            id="confirm_password"
+                            name="confirm_password"
+                            type="password"
+                            autocomplete="new-password"
+                            required
+                            placeholder="Confirm password"
+
+
+                            class="w-full h-11 px-4 pr-12 border border-gray-300 rounded-lg
+                            focus:ring-2 focus:ring-blue-500
+                            focus:border-blue-500
+                            outline-none transition"
+
+                        >
+
+
+
+                        <button
+
+                            type="button"
+
+                            data-target="confirm_password"
+
+                            class="password-toggle absolute right-3 top-1/2 -translate-y-1/2
+                            text-gray-400 hover:text-gray-600"
+
+                        >
+
+                            <span class="material-symbols-outlined">
+
+                                visibility
+
+                            </span>
+
+
+                        </button>
+
+
+
+                    </div>
+
+
+                </div>
+
+
+
+
+
+
+
+
+
+                <!-- SUBMIT -->
+
+
+                <button
+
+                    type="submit"
+
+                    id="submitBtn"
+
+                    class="w-full h-11 bg-primary hover:bg-primaryHover
+                    text-white font-semibold rounded-lg transition"
+
+                >
+
+                    CREATE ACCOUNT
+
+
+                </button>
+
+
+
+            </form>
+
+
+
+
+
+
+
+
+
+            <!-- FOOTER -->
+
+
+            <footer class="border-t border-gray-100 mt-6 pt-5 text-center text-sm">
+
+
+                <span class="text-gray-600">
+
+                    Already have an account?
+
+                </span>
+
+
+
+                <a
+
+                    href="{% url 'login' %}"
+
+                    class="text-blue-600 font-semibold hover:underline"
+
+                >
+
+                    Login
+
+                </a>
+
+
+
+            </footer>
+
+
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+
+{% endblock %}
+
+
+
+
+
+
+
+
+{% block extra_js %}
+
+
+<script>
+
+
+/*
+    Password Visibility Toggle
+*/
+
+
+document.querySelectorAll(".password-toggle")
+.forEach(button => {
+
+
+    button.addEventListener("click",()=>{
+
+
+        const target =
+        document.getElementById(
+            button.dataset.target
+        );
+
+
+        const icon =
+        button.querySelector("span");
+
+
+
+        if(target.type === "password"){
+
+
+            target.type="text";
+
+            icon.textContent="visibility_off";
+
+
+        }else{
+
+
+            target.type="password";
+
+            icon.textContent="visibility";
+
+
+        }
+
+
+    });
+
+
+});
+
+
+
+
+
+
+
+
+
+/*
+    Password Strength Checker
+*/
+
+
+const password =
+document.getElementById("password");
+
+
+
+const rules = {
+
+
+length:value =>
+value.length >= 12,
+
+
+uppercase:value =>
+/[A-Z]/.test(value),
+
+
+lowercase:value =>
+/[a-z]/.test(value),
+
+
+number:value =>
+/\d/.test(value),
+
+
+special:value =>
+/[!@#$%^&*(),.?":{}|<>]/.test(value)
+
+
+
+};
+
+
+
+
+
+
+password.addEventListener("input",()=>{
+
+
+const value=password.value;
+
+
+
+document
+.querySelectorAll(".requirement")
+.forEach(item=>{
+
+
+const rule=item.dataset.rule;
+
+const indicator =
+item.querySelector(".indicator");
+
+
+if(rules[rule](value)){
+
+
+indicator.className =
+"indicator w-3.5 h-3.5 rounded-full bg-blue-600";
+
+
+}else{
+
+
+indicator.className =
+"indicator w-3.5 h-3.5 rounded-full border border-gray-300";
+
+
+}
+
+
+
+});
+
+
+});
+
+
+
+</script>
+
+
+
+{% endblock %}
