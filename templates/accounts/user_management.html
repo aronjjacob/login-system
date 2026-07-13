@@ -1,0 +1,70 @@
+{% extends "accounts/base.html" %} {% block title %} User Management {% endblock%} {% block content %}
+
+<div class="min-h-screen bg-gray-50 flex">
+  <!-- SIDEBAR -->
+
+  {% include "accounts/sidebar.html" %}
+
+  <!-- CONTENT -->
+
+  <main class="flex-1 p-8">
+    <div class="flex justify-between mb-6">
+      <h2 class="text-2xl font-semibold">User Management</h2>
+
+      <a
+        href="{% url 'create_user' %}"
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg"
+      >
+        + Create User
+      </a>
+    </div>
+
+    <div class="bg-white rounded-xl border overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left">Username</th>
+
+            <th class="px-5 py-3 text-left">Email</th>
+
+            <th class="px-5 py-3 text-left">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for user in users %}
+
+          <tr class="border-t">
+            <td class="px-5 py-3">{{user.username}}</td>
+
+            <td class="px-5 py-3">{{user.email}}</td>
+
+            <td class="px-5 py-3 space-x-3">
+              <a href="{% url 'edit_user' user.id %}" class="text-blue-600">
+                Edit
+              </a>
+
+              <a
+                href="{% url 'delete_user' user.id %}"
+                onclick="return confirm('Delete this user?');"
+                class="text-red-600"
+              >
+                Delete
+              </a>
+            </td>
+          </tr>
+
+          {% empty %}
+
+          <tr>
+            <td colspan="3" class="text-center py-5">No users found.</td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+{% endblock %}

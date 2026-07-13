@@ -1,60 +1,248 @@
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from django.core.mail import send_mail
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+from django.contrib.auth import logout
+from django.contrib.auth.hashers import make_password
 
-import random
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+from .models import UserProfile, LoginActivity
+from django.core.paginator import Paginator
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
+from django.contrib import messages
+from django.shortcuts import get_object_or_404
 import secrets
 import time
 import re
+
+# ==========================================
+# LOGIN
+# ==========================================
 
 
 def login_view(request):
 
     if request.method == "POST":
 
-        username = request.POST.get("username")
-        password = request.POST.get("password")
 
-        user = authenticate(
-            request,
-            username=username,
-            password=password
+        username = request.POST.get(
+            "username"
         )
 
-        if user is None:
+
+        password = request.POST.get(
+            "password"
+        )
+
+
+
+        try:
+
+            user = User.objects.get(
+                username=username
+            )
+
+
+        except User.DoesNotExist:
+
+
+            LoginActivity.objects.create(
+
+                username=username,
+
+                authentication_status="FAILED",
+
+                reason="Username does not exist"
+
+            )
+
 
             messages.error(
                 request,
                 "Invalid username or password."
             )
 
-            return redirect("login")
+
+            return redirect(
+                "login"
+            )
+
+
+
+        profile, created = UserProfile.objects.get_or_create(
+            user=user
+        )
+
+
+
+        # ==============================
+        # CHECK ACCOUNT LOCK
+        # ==============================
+
+
+        if profile.is_locked:
+
+
+            LoginActivity.objects.create(
+
+                user=user,
+
+                username=username,
+
+                authentication_status="FAILED",
+
+                reason="Account is locked"
+
+            )
+
+
+            messages.error(
+                request,
+                "Account is locked. Contact administrator."
+            )
+
+
+            return redirect(
+                "login"
+            )
+
+
+
+
+        authenticated_user = authenticate(
+
+            request,
+
+            username=username,
+
+            password=password
+
+        )
+
+
+
+        # ==============================
+        # WRONG PASSWORD
+        # ==============================
+
+
+        if authenticated_user is None:
+
+
+            profile.failed_login_attempts += 1
+
+            profile.save()
+
+
+
+            LoginActivity.objects.create(
+
+                user=user,
+
+                username=username,
+
+                authentication_status="FAILED",
+
+                reason="Incorrect password"
+
+            )
+
+
+
+            if profile.failed_login_attempts >= 5:
+
+
+                profile.is_locked = True
+
+                profile.lock_reason = (
+                    "Maximum failed login attempts reached"
+                )
+
+                profile.locked_at = timezone.now()
+
+                profile.save()
+
+
+
+                messages.error(
+                    request,
+                    "Account locked because of multiple failed attempts."
+                )
+
+
+            else:
+
+
+                remaining = (
+                    5 - profile.failed_login_attempts
+                )
+
+
+                messages.error(
+
+                    request,
+
+                    f"Incorrect password. {remaining} attempts remaining."
+
+                )
+
+
+
+            return redirect(
+                "login"
+            )
+
 
 
         if not user.email:
 
+
             messages.error(
                 request,
-                "This account has no email address registered."
+                "No email registered."
             )
 
-            return redirect("login")
+
+            return redirect(
+                "login"
+            )
 
 
-        otp = str(secrets.randbelow(900000) + 100000)
+
+
+        # CREATE OTP
+
+
+        otp = str(
+            secrets.randbelow(900000) + 100000
+        )
+
 
         request.session["otp"] = otp
+
         request.session["otp_created"] = time.time()
+
         request.session["user_id"] = user.id
+
+
 
 
         try:
 
+
             send_mail(
+
                 subject="Secure Login Verification",
+
+
                 message=f"""
 Hello {user.username},
 
@@ -64,26 +252,46 @@ Your One-Time Password (OTP) is:
 
 This code is required to complete your login.
 
-If you did not request this login, simply ignore this email.
-
 Secure Authentication System
 """,
+
+
                 from_email=None,
-                recipient_list=[user.email],
-                fail_silently=False,
+
+
+                recipient_list=[
+                    user.email
+                ],
+
+
+                fail_silently=False
+
             )
+
+
 
         except Exception as e:
 
+
             messages.error(
+
                 request,
-                f"Unable to send OTP email.\n{e}"
+
+                f"Unable to send OTP: {e}"
+
             )
 
-            return redirect("login")
+
+            return redirect(
+                "login"
+            )
 
 
-        return redirect("verify_otp")
+
+        return redirect(
+            "verify_otp"
+        )
+
 
 
     return render(
@@ -92,59 +300,175 @@ Secure Authentication System
     )
 
 
+# ==========================================
+# VERIFY OTP
+# ==========================================
 
 def verify_otp(request):
 
+    otp_created = request.session.get(
+        "otp_created"
+    )
+
+    remaining_time = 0
+
+
+    if otp_created:
+
+        remaining_time = max(
+            0,
+            300 - int(time.time() - otp_created)
+        )
+
+
+
     if request.method == "POST":
 
-        entered_otp = request.POST.get("otp")
+        entered_otp = request.POST.get(
+            "otp"
+        )
 
-        saved_otp = request.session.get("otp")
-        otp_created = request.session.get("otp_created")
+
+        saved_otp = request.session.get(
+            "otp"
+        )
+
+
+        otp_created = request.session.get(
+            "otp_created"
+        )
+
 
 
         if not saved_otp or not otp_created:
+
 
             messages.error(
                 request,
                 "OTP session expired. Please login again."
             )
 
-            return redirect("login")
+
+            return redirect(
+                "login"
+            )
+
 
 
         if time.time() - otp_created > 300:
 
+
             messages.error(
                 request,
-                "OTP expired. Please request a new login."
+                "OTP expired. Please login again."
             )
 
-            request.session.pop("otp", None)
-            request.session.pop("otp_created", None)
-            request.session.pop("user_id", None)
 
-            return redirect("login")
+            request.session.flush()
 
+
+            return redirect(
+                "login"
+            )
+
+
+
+        # ==============================
+        # OTP SUCCESS
+        # ==============================
 
         if entered_otp == saved_otp:
+
 
             user = User.objects.get(
                 id=request.session["user_id"]
             )
 
-            login(request, user)
+
+            login(
+                request,
+                user
+            )
 
 
-            request.session.pop("otp", None)
-            request.session.pop("otp_created", None)
-            request.session.pop("user_id", None)
+
+            # CREATE SUCCESS LOGIN LOG
+
+            LoginActivity.objects.create(
+
+                user=user,
+
+                username=user.username,
+
+                authentication_status="SUCCESS",
+
+                reason="OTP verified. Login successful."
+
+            )
 
 
-            return redirect("dashboard")
+
+            # CLEAR OTP SESSION
+
+            request.session.pop(
+                "otp",
+                None
+            )
+
+
+            request.session.pop(
+                "otp_created",
+                None
+            )
+
+
+            request.session.pop(
+                "user_id",
+                None
+            )
+
+
+
+            # ROLE REDIRECT
+
+            if user.is_staff:
+
+
+                return redirect(
+                    "admin_dashboard"
+                )
+
+
+            else:
+
+
+                return redirect(
+                    "dashboard"
+                )
+
 
 
         else:
+
+
+            # WRONG OTP
+
+            LoginActivity.objects.create(
+
+                user=User.objects.get(
+                    id=request.session["user_id"]
+                ),
+
+                username=User.objects.get(
+                    id=request.session["user_id"]
+                ).username,
+
+                authentication_status="FAILED",
+
+                reason="Incorrect OTP"
+
+            )
+
 
             messages.error(
                 request,
@@ -152,22 +476,130 @@ def verify_otp(request):
             )
 
 
+
     return render(
+
         request,
-        "accounts/verify_otp.html"
+
+        "accounts/verify_otp.html",
+
+        {
+
+            "remaining_time": remaining_time
+
+        }
+
+    )
+
+# ==========================================
+# RESEND OTP
+# ==========================================
+
+def resend_otp(request):
+
+    user_id = request.session.get(
+        "user_id"
+    )
+
+    if not user_id:
+
+        messages.error(
+            request,
+            "Your login session expired."
+        )
+
+        return redirect("login")
+
+    user = User.objects.get(
+        id=user_id
+    )
+
+    otp = str(
+        secrets.randbelow(900000) + 100000
+    )
+
+    request.session["otp"] = otp
+
+    request.session["otp_created"] = time.time()
+
+    try:
+
+        send_mail(
+
+            subject="Secure Login Verification",
+
+
+            message=f"""
+Hello {user.username},
+
+Your new One-Time Password (OTP) is:
+
+{otp}
+
+Secure Authentication System
+""",
+
+
+            from_email=None,
+
+
+            recipient_list=[
+                user.email
+            ],
+
+
+            fail_silently=False
+
+        )
+
+        messages.success(
+            request,
+            "New OTP sent."
+        )
+
+    except:
+
+        messages.error(
+            request,
+            "Unable to resend OTP."
+        )
+
+    return redirect(
+        "verify_otp"
     )
 
 
+# ==========================================
+# REGISTER
+# ==========================================
 
 def register_view(request):
 
     if request.method == "POST":
 
-        username = request.POST.get("username")
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-        confirm_password = request.POST.get("confirm_password")
+        first_name = request.POST.get(
+            "first_name"
+        )
 
+        last_name = request.POST.get(
+            "last_name"
+        )
+
+        username = request.POST.get(
+            "username"
+        )
+
+        email = request.POST.get(
+            "email"
+        )
+
+        password = request.POST.get(
+            "password"
+        )
+
+        confirm_password = request.POST.get(
+            "confirm_password"
+        )
 
         if password != confirm_password:
 
@@ -178,7 +610,6 @@ def register_view(request):
 
             return redirect("register")
 
-
         if len(password) < 12:
 
             messages.error(
@@ -188,26 +619,23 @@ def register_view(request):
 
             return redirect("register")
 
-
         if not re.search("[A-Z]", password):
 
             messages.error(
                 request,
-                "Password must contain an uppercase letter."
+                "Password must contain uppercase letter."
             )
 
             return redirect("register")
-
 
         if not re.search("[a-z]", password):
 
             messages.error(
                 request,
-                "Password must contain a lowercase letter."
+                "Password must contain lowercase letter."
             )
 
             return redirect("register")
-
 
         if not re.search("[0-9]", password):
 
@@ -218,16 +646,14 @@ def register_view(request):
 
             return redirect("register")
 
-
         if not re.search("[!@#$%^&*]", password):
 
             messages.error(
                 request,
-                "Password must contain a special character."
+                "Password must contain special character."
             )
 
             return redirect("register")
-
 
         if User.objects.filter(username=username).exists():
 
@@ -238,21 +664,32 @@ def register_view(request):
 
             return redirect("register")
 
-
         if User.objects.filter(email=email).exists():
 
             messages.error(
                 request,
-                "Email is already registered."
+                "Email already registered."
             )
 
             return redirect("register")
 
+        user = User.objects.create_user(
 
-        User.objects.create_user(
             username=username,
+
             email=email,
-            password=password
+
+            password=password,
+
+            first_name=first_name,
+
+            last_name=last_name
+
+        )
+
+
+        UserProfile.objects.create(
+            user=user
         )
 
 
@@ -261,8 +698,8 @@ def register_view(request):
             "Account created successfully."
         )
 
-        return redirect("login")
 
+        return redirect("login")
 
     return render(
         request,
@@ -270,8 +707,11 @@ def register_view(request):
     )
 
 
+# ==========================================
+# FORGOT PASSWORD
+# ==========================================
 
-def forgot_password_view(request):
+def forgot_password(request):
 
     return render(
         request,
@@ -279,24 +719,438 @@ def forgot_password_view(request):
     )
 
 
+# ==========================================
+# USER DASHBOARD
+# ==========================================
 
+@login_required(login_url="login")
 def dashboard_view(request):
+
+    user = request.user
+
+
+    recent_activity = LoginActivity.objects.filter(
+        user=user
+    ).order_by(
+        "-login_time"
+    )[:5]
+
+
+    context = {
+
+        "username": user.username,
+
+        "email": user.email,
+
+        "recent_activity": recent_activity,
+
+    }
+
 
     return render(
         request,
-        "accounts/dashboard.html"
+        "accounts/dashboard.html",
+        context
+    )
+    
+# ==========================================
+# ADMIN SECURITY CHECK
+# ==========================================
+
+
+def admin_required(user):
+
+    return (
+        user.is_authenticated
+        and user.is_staff
     )
 
 
 
-def test_email(request):
+# ==========================================
+# ADMIN DASHBOARD
+# ==========================================
 
-    send_mail(
-        subject="SMTP Test",
-        message="Congratulations! Gmail SMTP is working correctly.",
-        from_email=None,
-        recipient_list=["jacobkolera@gmail.com"],
-        fail_silently=False,
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def admin_dashboard(request):
+
+
+    total_users = User.objects.count()
+
+
+
+    active_users = User.objects.filter(
+        is_active=True
+    ).count()
+
+
+
+    locked_accounts = UserProfile.objects.filter(
+        is_locked=True
+    ).count()
+
+
+
+    failed_attempts = LoginActivity.objects.filter(
+        authentication_status="FAILED"
+    ).count()
+
+
+
+    successful_logins = LoginActivity.objects.filter(
+        authentication_status="SUCCESS"
+    ).count()
+
+
+
+    # ==============================
+    # PAGINATION
+    # ==============================
+
+
+    logs = LoginActivity.objects.order_by(
+        "-login_time"
     )
 
-    return HttpResponse("Email sent successfully!")
+
+
+    paginator = Paginator(
+
+        logs,
+
+        10
+
+    )
+
+
+
+    page_number = request.GET.get(
+        "page"
+    )
+
+
+
+    recent_activity = paginator.get_page(
+        page_number
+    )
+
+
+
+    context = {
+
+
+        "total_users":
+            total_users,
+
+
+        "active_users":
+            active_users,
+
+
+        "locked_accounts":
+            locked_accounts,
+
+
+        "failed_attempts":
+            failed_attempts,
+
+
+        "successful_logins":
+            successful_logins,
+
+
+        "recent_activity":
+            recent_activity,
+
+
+    }
+
+
+
+    return render(
+
+        request,
+
+        "accounts/admin_dashboard.html",
+
+        context
+
+    )
+    
+# ==========================================
+# LOGOUT
+# ==========================================
+
+def logout_view(request):
+
+    logout(request)
+
+    messages.success(
+        request,
+        "You have been logged out successfully."
+    )
+
+    return redirect("login")
+
+
+
+    
+# ==========================================
+# USER MANAGEMENT
+# ==========================================
+
+
+# LIST USERS
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def user_management(request):
+
+    users = User.objects.all().order_by(
+        "-date_joined"
+    )
+
+    context = {
+        "users": users
+    }
+
+    return render(
+        request,
+        "accounts/user_management.html",
+        context
+    )
+
+
+# ==========================================
+# CREATE USER
+# ==========================================
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def create_user(request):
+
+    if request.method == "POST":
+
+        username = request.POST.get(
+            "username"
+        )
+
+        email = request.POST.get(
+            "email"
+        )
+
+        password = request.POST.get(
+            "password"
+        )
+
+
+        # CHECK EXISTING USERNAME
+
+        if User.objects.filter(
+            username=username
+        ).exists():
+
+            messages.error(
+                request,
+                "Username already exists."
+            )
+
+            return redirect(
+                "create_user"
+            )
+
+
+        # CHECK EXISTING EMAIL
+
+        if User.objects.filter(
+            email=email
+        ).exists():
+
+            messages.error(
+                request,
+                "Email already registered."
+            )
+
+            return redirect(
+                "create_user"
+            )
+
+
+        user = User.objects.create_user(
+
+            username=username,
+
+            email=email,
+
+            password=password
+
+        )
+
+
+        UserProfile.objects.create(
+            user=user
+        )
+
+
+        messages.success(
+            request,
+            "User created successfully."
+        )
+
+
+        return redirect(
+            "user_management"
+        )
+
+
+    return render(
+        request,
+        "accounts/create_user.html"
+    )
+
+
+
+# ==========================================
+# EDIT USER
+# ==========================================
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def edit_user(request, user_id):
+
+    user = get_object_or_404(
+        User,
+        id=user_id
+    )
+
+
+    if request.method == "POST":
+
+        username = request.POST.get(
+            "username"
+        )
+
+        email = request.POST.get(
+            "email"
+        )
+
+
+        user.username = username
+
+        user.email = email
+
+
+        user.save()
+
+
+        messages.success(
+            request,
+            "User updated successfully."
+        )
+
+
+        return redirect(
+            "user_management"
+        )
+
+
+    context = {
+
+        "user": user
+
+    }
+
+
+    return render(
+        request,
+        "accounts/edit_user.html",
+        context
+    )
+
+
+
+# ==========================================
+# DELETE USER
+# ==========================================
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def delete_user(request, user_id):
+
+    user = get_object_or_404(
+        User,
+        id=user_id
+    )
+
+
+    # PREVENT DELETE ADMIN
+
+    if user.is_superuser:
+
+        messages.error(
+            request,
+            "Cannot delete administrator account."
+        )
+
+
+    else:
+
+        user.delete()
+
+
+        messages.success(
+            request,
+            "User deleted successfully."
+        )
+
+
+    return redirect(
+        "user_management"
+    )
+    
+
+# ==========================================
+# LOCKED ACCOUNTS
+# ==========================================
+
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def locked_accounts(request):
+
+    locked_users = User.objects.filter(
+        userprofile__is_locked=True
+    ).select_related("userprofile")
+
+    return render(
+        request,
+        "accounts/locked_accounts.html",
+        {
+            "locked_users": locked_users
+        }
+    )
+
+
+
+# ==========================================
+# UNLOCK USER
+# ==========================================
+
+
+@login_required(login_url="login")
+@user_passes_test(admin_required)
+def unlock_account(request, user_id):
+
+    user = get_object_or_404(User, id=user_id)
+
+    profile = user.userprofile
+
+    profile.failed_login_attempts = 0
+    profile.is_locked = False
+    profile.lock_reason = None
+    profile.locked_at = None
+
+    profile.save()
+
+    return redirect("locked_accounts")
